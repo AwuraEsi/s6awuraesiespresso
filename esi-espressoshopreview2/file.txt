@@ -1,0 +1,101 @@
+NAME: review2
+LAST DEPLOYED: Sun Feb  4 07:23:42 2024
+NAMESPACE: default
+STATUS: pending-install
+REVISION: 1
+TEST SUITE: None
+HOOKS:
+MANIFEST:
+---
+# Source: kaakyire/templates/pdb.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: esi-espressoshopreview2
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: espresso-shop-reviews
+---
+# Source: kaakyire/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: esi-espressoshopreview2
+  labels:
+    app: espresso-shop-reviews
+---
+# Source: kaakyire/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: esi-espressoshopreview2
+  labels:
+    app: espresso-shop-reviews
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: espresso-shop-reviews
+  template:
+     
+    metadata:
+      labels:
+        app: espresso-shop-reviews
+        version: v2
+    spec:
+      serviceAccountName: esi-espressoshopreview2
+      securityContext:
+        {}
+      containers:
+        - name: kaakyire
+          securityContext:
+            {}
+          image: hossambarakat/espresso-shop-reviews
+          env:
+            - name: SERVICE_VERSION
+              value: v2
+            
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+        #  livenessProbe:
+        #    httpGet:
+        #      path: /
+        #      port: http
+        #  readinessProbe:
+        #    httpGet:
+        #      path: /
+        #      port: http
+          resources:
+            {}
+---
+# Source: kaakyire/templates/hpa.yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: esi-espressoshopreview2
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: esi-espressoshopreview2
+  minReplicas: 1
+  maxReplicas: 100
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50
+
+NOTES:
+1. Get the application URL by running these commands:
+  export POD_NAME=$(kubectl get pods --namespace default -l "app.kubernetes.io/name=kaakyire,app.kubernetes.io/instance=review2" -o jsonpath="{.items[0].metadata.name}")
+  export CONTAINER_PORT=$(kubectl get pod --namespace default $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}")
+  echo "Visit http://127.0.0.1:8080 to use your application"
+  kubectl --namespace default port-forward $POD_NAME 8080:$CONTAINER_PORT

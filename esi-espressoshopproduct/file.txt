@@ -1,0 +1,115 @@
+NAME: product
+LAST DEPLOYED: Sun Feb  4 07:34:47 2024
+NAMESPACE: default
+STATUS: pending-install
+REVISION: 1
+TEST SUITE: None
+HOOKS:
+MANIFEST:
+---
+# Source: kaakyire/templates/pdb.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: esi-espressoshopproduct
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: espresso-shop-product
+---
+# Source: kaakyire/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: esi-espressoshopproduct
+  labels:
+    app: espresso-shop-product
+---
+# Source: kaakyire/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: espresso-shop-product-catalog-svc
+  labels:
+    app: espresso-shop-product
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8091
+      targetPort: 80
+      protocol: TCP
+      name: http
+  selector:
+    app: espresso-shop-product
+---
+# Source: kaakyire/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: esi-espressoshopproduct
+  labels:
+    app: espresso-shop-product
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: espresso-shop-product
+  template:
+     
+    metadata:
+      labels:
+        app: espresso-shop-product
+        version: v1
+    spec:
+      serviceAccountName: esi-espressoshopproduct
+      securityContext:
+        {}
+      containers:
+        - name: kaakyire
+          securityContext:
+            {}
+          image: hossambarakat/espresso-shop-product-catalog
+          
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+        #  livenessProbe:
+        #    httpGet:
+        #      path: /
+        #      port: http
+        #  readinessProbe:
+        #    httpGet:
+        #      path: /
+        #      port: http
+          resources:
+            {}
+---
+# Source: kaakyire/templates/hpa.yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: esi-espressoshopproduct
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: esi-espressoshopproduct
+  minReplicas: 1
+  maxReplicas: 100
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50
+
+NOTES:
+1. Get the application URL by running these commands:
+  export POD_NAME=$(kubectl get pods --namespace default -l "app.kubernetes.io/name=kaakyire,app.kubernetes.io/instance=product" -o jsonpath="{.items[0].metadata.name}")
+  export CONTAINER_PORT=$(kubectl get pod --namespace default $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}")
+  echo "Visit http://127.0.0.1:8080 to use your application"
+  kubectl --namespace default port-forward $POD_NAME 8080:$CONTAINER_PORT
